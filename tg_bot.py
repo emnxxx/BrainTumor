@@ -35,7 +35,14 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text("Help!")
 
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def saveImage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    image_file = await update.message.photo[-1].get_file()
+    await image_file.download_to_drive("image.jpg")
+    logger.info("Photo of %s: %s", "image.jpg")
+    await update.message.reply_text("Image saved!")
+
+
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Echo the user message."""
     await update.message.reply_text(update.message.text)
 
@@ -51,6 +58,8 @@ def main() -> None:
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    # handle photo
+    application.add_handler(MessageHandler(filters.PHOTO, saveImage))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
