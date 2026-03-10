@@ -1,5 +1,9 @@
 import logging
+import hashlib
+import datetime
 
+# from Load_model import Load_model
+from kursach_resize import resize_image
 from telegram import ForceReply, Update
 from telegram.ext import (
     Application,
@@ -18,6 +22,13 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
+DOWNLOAD_FOLDER = "downloaded"
+
+
+def getHash(text: str, hashLength: int):
+    text_to_bytes = bytes(text, "utf-8")
+    return hashlib.shake_256(text_to_bytes).hexdigest(hashLength // 2)
+
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
@@ -35,10 +46,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text("Help!")
 
 
-async def saveImage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def saveImage(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, download_folder=DOWNLOAD_FOLDER
+) -> None:
+    # Get caption hash it, set filename
+    date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    image_caption = update.message.caption
+    hashed_caption = getHash(image_caption, 20)
+    filename = f"{hashed_caption}_{date}"
+    # Get and download photo
     image_file = await update.message.photo[-1].get_file()
-    await image_file.download_to_drive("image.jpg")
-    logger.info("Photo of %s: %s", "image.jpg")
+    await image_file.download_to_drive(custom_path=f"{download_folder}/{filename}.jpg")
     await update.message.reply_text("Image saved!")
 
 
@@ -50,6 +68,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
+    # CHANGEIT!!!
     application = Application.builder().token("TOKEN").build()
 
     # on different commands - answer in Telegram
@@ -63,6 +82,12 @@ def main() -> None:
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+    # Load the model
+    # Load_model()
+
+    # Resize given image
+    # resize_image((256, 256), "image", "resized")
 
 
 if __name__ == "__main__":
