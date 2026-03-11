@@ -3,7 +3,7 @@ import hashlib
 import datetime
 
 # from Load_model import Load_model
-from kursach_resize import resize_image
+from resize import resize_image
 from telegram import ForceReply, Update
 from telegram.ext import (
     Application,
@@ -57,6 +57,7 @@ async def saveImage(
     # Get and download photo
     image_file = await update.message.photo[-1].get_file()
     await image_file.download_to_drive(custom_path=f"{download_folder}/{filename}.jpg")
+    resize_image(f"{filename}.jpg", "downloaded", "resized")
     await update.message.reply_text("Image saved!")
 
 
@@ -82,12 +83,6 @@ def main() -> None:
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-    # Load the model
-    # Load_model()
-
-    # Resize given image
-    # resize_image((256, 256), "image", "resized")
 
 
 if __name__ == "__main__":
