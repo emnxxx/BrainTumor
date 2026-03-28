@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import os
 
-
+from database import init_db, save_to_db
 from model import ConvNet
 from PIL import Image
 from torchvision import transforms
@@ -107,11 +107,20 @@ def format_pred_result(result):
 
 
 async def handle_prediction(update: Update, image_path: str) -> None:
+    user = update.effective_user
+
     processing_msg = await update.message.reply_text("Analizing image...")
 
     try:
         # Get prediction
         result = predict_tumor(image_path)
+        # Save results
+        save_to_db(
+            user_id=user.id,
+            username=user.username or user.first_name,
+            result_class=result["class"],
+            confidence=result["confidence"],
+        )
         # Format and send results
         response_text = format_pred_result(result)
         # Delete processing message
@@ -132,10 +141,14 @@ async def saveImage(
     update: Update, context: ContextTypes.DEFAULT_TYPE, download_folder=DOWNLOAD_FOLDER
 ) -> None:
 
-    # Get caption hash it, set filename
+    # Get user, caption, then hash it, set filename
+    user = update.effective_user
     date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     image_caption = update.message.caption
-    hashed_caption = getHash(image_caption, 20)
+    if not image_caption:
+        hashed_caption = getHash(date + str(user.id), 20)
+    else:
+        hashed_caption = getHash(image_caption, 20)
     filename = f"{hashed_caption}_{date}"
     file_path = f"{DOWNLOAD_FOLDER}/{filename}.jpg"
 
@@ -178,7 +191,7 @@ def main() -> None:
     """Start the bot."""
     os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
     # Create the Application and pass it your bot's token.
-    # CHANGEIT!!!
+    init_db()
     application = (
         Application.builder()
         .token("TOKEN")
